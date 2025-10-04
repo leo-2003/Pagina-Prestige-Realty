@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../context/AuthContext';
 import type { Property } from '../types';
 import { MapPinIcon, BuildingOffice2Icon, CalendarIcon, CheckCircleIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
@@ -23,9 +23,10 @@ const AreaIcon = () => (
 
 // Agent Contact Form Component
 const AgentContactForm: React.FC<{ agent: Property['agent'], propertyId: string }> = ({ agent, propertyId }) => {
-    const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const navigate = useNavigate();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -34,8 +35,8 @@ const AgentContactForm: React.FC<{ agent: Property['agent'], propertyId: string 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.email) {
-            alert('Por favor, complete los campos de nombre y correo electrónico.');
+        if (!formData.name || !formData.email || !formData.phone) {
+            alert('Por favor, complete los campos de nombre, correo electrónico y teléfono.');
             return;
         }
 
@@ -46,9 +47,10 @@ const AgentContactForm: React.FC<{ agent: Property['agent'], propertyId: string 
             {
                 name: formData.name,
                 email: formData.email,
+                phone: formData.phone,
                 initial_message: formData.message,
                 property_id: propertyId,
-                status: 'New',
+                status: 'Appointment Scheduled',
                 inquiry_date: new Date().toISOString().split('T')[0]
             }
         ]);
@@ -56,16 +58,16 @@ const AgentContactForm: React.FC<{ agent: Property['agent'], propertyId: string 
         if (error) {
             console.error('Error creating new client lead:', error);
             setSubmitStatus('error');
+            setIsSubmitting(false);
         } else {
-            setSubmitStatus('success');
-            setFormData({ name: '', email: '', message: '' });
+            // On success, redirect to the scheduling page
+            navigate('/schedule');
         }
-        setIsSubmitting(false);
     };
 
     return (
         <div className="bg-white p-8 rounded-lg shadow-lg h-fit sticky top-24">
-            <h3 className="text-2xl font-bold mb-6 text-center">Contactar al Agente</h3>
+            <h3 className="text-2xl font-bold mb-6 text-center">Agendar una Visita</h3>
             <div className="flex flex-col items-center mb-4">
                 <img src={agent.imageUrl} alt={agent.name} className="w-24 h-24 rounded-full object-cover mb-3" />
                 <p className="font-bold text-xl">{agent.name}</p>
@@ -81,19 +83,15 @@ const AgentContactForm: React.FC<{ agent: Property['agent'], propertyId: string 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <input type="text" name="name" placeholder="Tu Nombre" value={formData.name} onChange={handleChange} required className="w-full p-3 border rounded-md" />
                 <input type="email" name="email" placeholder="Tu Email" value={formData.email} onChange={handleChange} required className="w-full p-3 border rounded-md" />
-                <textarea name="message" placeholder="Estoy interesado en esta propiedad..." value={formData.message} onChange={handleChange} rows={4} className="w-full p-3 border rounded-md"></textarea>
+                <input type="tel" name="phone" placeholder="Tu Teléfono" value={formData.phone} onChange={handleChange} required className="w-full p-3 border rounded-md" />
+                <textarea name="message" placeholder="¿Algún mensaje adicional? (Opcional)" value={formData.message} onChange={handleChange} rows={3} className="w-full p-3 border rounded-md"></textarea>
                 <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-blue-400">
-                    {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
+                    {isSubmitting ? 'Registrando...' : 'Agendar y Continuar'}
                 </button>
             </form>
-            {submitStatus === 'success' && (
-                <p className="mt-4 text-center text-green-600 bg-green-100 p-2 rounded-md">
-                    ¡Mensaje enviado con éxito! Un agente se pondrá en contacto con usted en breve.
-                </p>
-            )}
             {submitStatus === 'error' && (
                 <p className="mt-4 text-center text-red-600 bg-red-100 p-2 rounded-md">
-                    Hubo un error al enviar su mensaje. Por favor, inténtelo de nuevo.
+                    Hubo un error al enviar su solicitud. Por favor, inténtelo de nuevo.
                 </p>
             )}
         </div>
