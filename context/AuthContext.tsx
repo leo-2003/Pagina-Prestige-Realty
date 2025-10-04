@@ -1,62 +1,79 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createClient, Session, User } from '@supabase/supabase-js';
 
-interface User {
-  email: string;
-}
+// --- Supabase Client Initialization ---
+// This is placed here to satisfy the project's "no new files" constraint.
+// In a larger project, this would typically be in its own file (e.g., lib/supabaseClient.ts).
+
+const supabaseUrl = 'https://mtyixobxgdnrzbenzvwq.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10eWl4b2J4Z2RucnpiZW56dndxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1MTQ0OTgsImV4cCI6MjA3NTA5MDQ5OH0.gf9S3UNRaMemfhjO21og9khWrTYYDfVpvJTNanm5dNw';
+
+// Export the client for use in other parts of the app
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// --- End Supabase Client Initialization ---
+
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => Promise<void>;
-  logout: () => void;
+  session: Session | null;
+  loading: boolean;
+  login: (email: string, pass: string) => Promise<any>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('adminUser');
-    if (storedUser) {
-        try {
-            return JSON.parse(storedUser);
-        } catch (e) {
-            console.error("Failed to parse user from localStorage", e);
-            localStorage.removeItem('adminUser');
-            return null;
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSession = async () => {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+            console.error("Error getting session:", error);
+        } else {
+            setSession(session);
+            setUser(session?.user ?? null);
         }
-    }
-    return null;
-  });
+        setLoading(false);
+    };
+
+    fetchSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+    });
+
+    return () => {
+        subscription?.unsubscribe();
+    };
+  }, []);
+
 
   const login = async (email: string, pass: string) => {
-    // Simulate API call
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (email === 'admin@prestige.com' && pass === 'admin123') {
-          const userData = { email };
-          localStorage.setItem('adminUser', JSON.stringify(userData));
-          setUser(userData);
-          resolve();
-        } else {
-          reject(new Error('Invalid credentials'));
-        }
-      }, 500);
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
   };
 
-  const logout = () => {
-    localStorage.removeItem('adminUser');
-    setUser(null);
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   const value = useMemo(() => ({
     user,
+    session,
+    loading,
     login,
     logout,
-  }), [user]);
+  }), [user, session, loading]);
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

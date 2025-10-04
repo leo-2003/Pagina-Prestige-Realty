@@ -1,8 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { MOCK_PROPERTIES } from '../constants';
-import { MapPinIcon, BuildingOffice2Icon, CalendarIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
+import { supabase } from '../context/AuthContext';
+import type { Property } from '../types';
+import { MapPinIcon, BuildingOffice2Icon, CalendarIcon, CheckCircleIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 import { PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
 const BedIcon = () => (
@@ -23,11 +23,53 @@ const AreaIcon = () => (
 
 const PropertyDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const property = MOCK_PROPERTIES.find(p => p.id === id);
-    const [mainImage, setMainImage] = useState(property?.images[0] || '');
+    const [property, setProperty] = useState<Property | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    if (!property) {
-        return <div className="text-center py-20">Property not found.</div>;
+    useEffect(() => {
+        const fetchProperty = async () => {
+            if (!id) return;
+            setLoading(true);
+            setError(null);
+
+            const { data, error } = await supabase
+                .from('properties')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                console.error("Error fetching property:", error);
+                setError("Property not found.");
+            } else {
+                setProperty(data as Property);
+                setCurrentImageIndex(0);
+            }
+            setLoading(false);
+        };
+
+        fetchProperty();
+    }, [id]);
+    
+    const goToPrevious = () => {
+        if (!property) return;
+        setCurrentImageIndex(prevIndex => (prevIndex === 0 ? property.images.length - 1 : prevIndex - 1));
+    };
+
+    const goToNext = () => {
+        if (!property) return;
+        setCurrentImageIndex(prevIndex => (prevIndex === property.images.length - 1 ? 0 : prevIndex + 1));
+    };
+
+
+    if (loading) {
+        return <div className="text-center py-20">Loading property details...</div>;
+    }
+    
+    if (error || !property) {
+        return <div className="text-center py-20">{error || 'Property not found.'}</div>;
     }
 
     return (
@@ -42,20 +84,51 @@ const PropertyDetailPage: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Image Gallery */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-                    <div className="lg:col-span-2">
-                        <img src={mainImage} alt={property.title} className="w-full h-[500px] object-cover rounded-lg shadow-lg"/>
-                    </div>
-                    <div className="grid grid-rows-4 gap-4">
-                         {property.images.map((img, index) => (
-                            <img key={index} src={img} alt={`${property.title} - view ${index + 1}`} 
-                                className={`w-full h-full object-cover rounded-lg cursor-pointer transition-opacity duration-300 ${mainImage === img ? 'opacity-50 ring-2 ring-blue-500' : 'hover:opacity-80'}`}
-                                onClick={() => setMainImage(img)}
+                {/* Image Carousel */}
+                {property.images && property.images.length > 0 && (
+                     <div className="mb-8">
+                        <div className="relative">
+                            <img 
+                                src={property.images[currentImageIndex]} 
+                                alt={property.title} 
+                                className="w-full h-[500px] object-cover rounded-lg shadow-lg"
                             />
-                        ))}
+                            {property.images.length > 1 && (
+                                <>
+                                    <button 
+                                        onClick={goToPrevious} 
+                                        className="absolute top-1/2 left-4 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
+                                        aria-label="Previous image"
+                                    >
+                                        <ChevronLeftIcon className="h-6 w-6"/>
+                                    </button>
+                                    <button 
+                                        onClick={goToNext} 
+                                        className="absolute top-1/2 right-4 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition"
+                                        aria-label="Next image"
+                                    >
+                                        <ChevronRightIcon className="h-6 w-6"/>
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                        {/* Thumbnails */}
+                        {property.images.length > 1 && (
+                            <div className="mt-4 flex space-x-2 overflow-x-auto pb-2">
+                                {property.images.map((img, index) => (
+                                    <img 
+                                        key={index} 
+                                        src={img} 
+                                        alt={`Thumbnail ${index + 1}`}
+                                        className={`flex-shrink-0 w-24 h-24 object-cover rounded-md cursor-pointer transition-all duration-300 ${currentImageIndex === index ? 'ring-4 ring-blue-500' : 'hover:opacity-80'}`}
+                                        onClick={() => setCurrentImageIndex(index)}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
-                </div>
+                )}
+               
 
                 {/* Main Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

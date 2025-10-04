@@ -17,8 +17,8 @@ const AdminLoginPage: React.FC = () => {
     try {
       await login(email, password);
       navigate('/admin/dashboard');
-    } catch (err) {
-      setError('Invalid email or password. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password. Please try again.');
     } finally {
         setLoading(false);
     }
@@ -40,7 +40,7 @@ const AdminLoginPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="admin@prestige.com"
+              placeholder="you@example.com"
             />
           </div>
           <div>
@@ -57,7 +57,7 @@ const AdminLoginPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="admin123"
+              placeholder="••••••••"
             />
           </div>
            {error && <p className="text-sm text-red-600">{error}</p>}

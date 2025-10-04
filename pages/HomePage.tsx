@@ -1,9 +1,11 @@
-import React from 'react';
-import { MOCK_PROPERTIES, SERVICES, TESTIMONIALS } from '../constants';
+import React, { useState, useEffect } from 'react';
+import { SERVICES, TESTIMONIALS } from '../constants';
 import PropertyCard from '../components/PropertyCard';
 import { MapPinIcon, BuildingOfficeIcon, CurrencyDollarIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { Link } from 'react-router-dom';
+import { supabase } from '../context/AuthContext';
+import type { Property } from '../types';
 
 // Hero Section Component
 const HeroSection: React.FC = () => (
@@ -38,24 +40,51 @@ const HeroSection: React.FC = () => (
 );
 
 // Featured Properties Section
-const FeaturedProperties: React.FC = () => (
-    <div className="py-16 bg-gray-100">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center mb-2">Propiedades Destacadas</h2>
-            <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">Explore una selección de nuestras mejores propiedades en ubicaciones privilegiadas, cuidadosamente seleccionadas para usted.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {MOCK_PROPERTIES.slice(0, 3).map(property => (
-                    <PropertyCard key={property.id} property={property} />
-                ))}
-            </div>
-            <div className="text-center mt-12">
-                <Link to="/properties" className="inline-block bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300">
-                    Ver Todas las Propiedades
-                </Link>
+const FeaturedProperties: React.FC = () => {
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProperties = async () => {
+            const { data, error } = await supabase
+                .from('properties')
+                .select('*')
+                .limit(3);
+            
+            if (error) {
+                console.error('Error fetching properties:', error);
+            } else {
+                setProperties(data as Property[]);
+            }
+            setLoading(false);
+        };
+
+        fetchProperties();
+    }, []);
+
+    return (
+        <div className="py-16 bg-gray-100">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 className="text-3xl font-bold text-center mb-2">Propiedades Destacadas</h2>
+                <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">Explore una selección de nuestras mejores propiedades en ubicaciones privilegiadas, cuidadosamente seleccionadas para usted.</p>
+                {loading ? (
+                    <div className="text-center">Cargando propiedades...</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {properties.map(property => (
+                            <PropertyCard key={property.id} property={property} />
+                        ))}
+                    </div>
+                )}
+                <div className="text-center mt-12">
+                    <Link to="/properties" className="inline-block bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300">
+                        Ver Todas las Propiedades
+                    </Link>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 // Services Section
 const ServicesSection: React.FC = () => (
@@ -123,7 +152,8 @@ const WhyChooseUs: React.FC = () => (
 
 // Agent Profile Section
 const AgentProfile: React.FC = () => {
-    const agent = MOCK_PROPERTIES[0].agent;
+    // Note: In a real app, this agent info would likely come from the database.
+    const agent = { name: 'John Doe', imageUrl: 'https://picsum.photos/seed/agent1/200/200' };
     return (
         <div className="py-16 bg-gray-100">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">

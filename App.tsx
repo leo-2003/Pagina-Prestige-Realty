@@ -12,6 +12,7 @@ import ContactPage from './pages/ContactPage';
 import SchedulePage from './pages/SchedulePage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProperties from './pages/admin/AdminProperties';
+import AdminPropertyForm from './pages/admin/AdminPropertyForm';
 import AdminClients from './pages/admin/AdminClients';
 import AdminContent from './pages/admin/AdminContent';
 import { AuthProvider } from './context/AuthContext';
@@ -46,6 +47,8 @@ const App: React.FC = () => {
               <Route index element={<AdminDashboard />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="properties" element={<AdminProperties />} />
+              <Route path="properties/new" element={<AdminPropertyForm />} />
+              <Route path="properties/edit/:id" element={<AdminPropertyForm />} />
               <Route path="clients" element={<AdminClients />} />
               <Route path="content" element={<AdminContent />} />
             </Route>
