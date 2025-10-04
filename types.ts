@@ -1,4 +1,7 @@
 
+
+import type React from 'react';
+
 export interface Property {
   id: string;
   title: string;
@@ -14,7 +17,7 @@ export interface Property {
   features: string[];
   amenities: string[];
   agent: Agent;
-  yearBuilt: number;
+  year_built: number;
 }
 
 export interface Agent {
@@ -52,5 +55,28 @@ export interface Client {
   email: string;
   phone: string;
   status: 'New' | 'Contacted' | 'Appointment Scheduled' | 'Closed' | 'Lost';
-  inquiryDate: string;
+  inquiry_date: string;
+  property_id?: string;
+  initial_message?: string;
+  property?: {
+    id: string;
+    title: string;
+  } | null;
+}
+
+export interface ClientStatusHistory {
+  id: number;
+  client_id: string;
+  old_status: Client['status'];
+  new_status: Client['status'];
+  changed_at: string;
+}
+
+export interface WebsiteContent {
+  id: number;
+  hero_headline: string;
+  hero_subheadline: string;
+  hero_image: string;
+  why_choose_us_title: string;
+  why_choose_us_text: string;
 }

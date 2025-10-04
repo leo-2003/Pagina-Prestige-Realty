@@ -28,7 +28,7 @@ const AdminProperties: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this property?')) {
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta propiedad?')) {
       const { error } = await supabase
         .from('properties')
         .delete()
@@ -36,13 +36,21 @@ const AdminProperties: React.FC = () => {
 
       if (error) {
         console.error('Error deleting property:', error);
-        alert('Failed to delete property.');
+        alert('Error al eliminar la propiedad.');
       } else {
         setProperties(properties.filter(p => p.id !== id));
       }
     }
   };
   
+  const statusDisplayMap: Record<Property['status'], string> = {
+    'For Sale': 'En Venta',
+    'For Rent': 'En Alquiler',
+    'Sold': 'Vendido',
+    'Rented': 'Alquilado',
+    'Paused': 'Pausado',
+  };
+
   const getStatusColor = (status: Property['status']) => {
     switch (status) {
       case 'For Sale': return 'bg-blue-100 text-blue-800';
@@ -57,10 +65,10 @@ const AdminProperties: React.FC = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Manage Properties</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Gestionar Propiedades</h1>
         <Link to="/admin/properties/new" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center">
           <PlusIcon className="h-5 w-5 mr-2" />
-          Add New Property
+          Añadir Nueva Propiedad
         </Link>
       </div>
 
@@ -68,15 +76,15 @@ const AdminProperties: React.FC = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Título</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
-              <tr><td colSpan={4} className="text-center py-4">Loading properties...</td></tr>
+              <tr><td colSpan={4} className="text-center py-4">Cargando propiedades...</td></tr>
             ) : (
               properties.map(property => (
                 <tr key={property.id}>
@@ -89,7 +97,7 @@ const AdminProperties: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(property.status)}`}>
-                      {property.status}
+                      {statusDisplayMap[property.status] || property.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

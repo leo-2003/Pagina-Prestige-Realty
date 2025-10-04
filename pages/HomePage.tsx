@@ -3,31 +3,61 @@ import { SERVICES, TESTIMONIALS } from '../constants';
 import PropertyCard from '../components/PropertyCard';
 import { MapPinIcon, BuildingOfficeIcon, CurrencyDollarIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../context/AuthContext';
-import type { Property } from '../types';
+import type { Property, WebsiteContent } from '../types';
 
 // Hero Section Component
-const HeroSection: React.FC = () => (
-    <div className="relative h-[60vh] md:h-[80vh] bg-cover bg-center" style={{ backgroundImage: "url('https://picsum.photos/seed/hero/1920/1080')" }}>
+const HeroSection: React.FC<{ content: WebsiteContent | null }> = ({ content }) => {
+    const navigate = useNavigate();
+    const [searchState, setSearchState] = useState({
+        location: '',
+        type: 'all',
+        price: 'all',
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setSearchState(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const queryParams = new URLSearchParams();
+        if (searchState.location) {
+            queryParams.set('location', searchState.location);
+        }
+        if (searchState.type !== 'all') {
+            queryParams.set('type', searchState.type);
+        }
+        if (searchState.price !== 'all') {
+            queryParams.set('price', searchState.price);
+        }
+        navigate(`/properties?${queryParams.toString()}`);
+    };
+    
+    return (
+    <div className="relative h-[60vh] md:h-[80vh] bg-cover bg-center" style={{ backgroundImage: `url('${content?.hero_image || 'https://picsum.photos/seed/hero/1920/1080'}')` }}>
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <div className="text-center text-white p-4">
-                <h1 className="text-4xl md:text-6xl font-extrabold mb-4 leading-tight">Encuentra la Propiedad de Tus Sueños</h1>
-                <p className="text-lg md:text-xl mb-8 max-w-3xl mx-auto">Tu socio de confianza en bienes raíces, dedicado a ayudarte a navegar tu próximo gran movimiento.</p>
+                <h1 className="text-4xl md:text-6xl font-extrabold mb-4 leading-tight">{content?.hero_headline || 'Encuentra la Propiedad de Tus Sueños'}</h1>
+                <p className="text-lg md:text-xl mb-8 max-w-3xl mx-auto">{content?.hero_subheadline || 'Tu socio de confianza en bienes raíces, dedicado a ayudarte a navegar tu próximo gran movimiento.'}</p>
                 <div className="bg-white bg-opacity-90 p-4 md:p-6 rounded-lg shadow-2xl max-w-4xl mx-auto">
-                    <form className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <input type="text" placeholder="Ubicación (Ciudad, Estado)" className="col-span-1 md:col-span-2 lg:col-span-2 p-3 rounded-md text-gray-700 focus:ring-2 focus:ring-blue-500" />
-                        <select className="p-3 rounded-md text-gray-500 focus:ring-2 focus:ring-blue-500">
-                            <option>Tipo de Propiedad</option>
-                            <option>Casa</option>
-                            <option>Apartamento</option>
-                            <option>Condominio</option>
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <input type="text" name="location" placeholder="Ubicación (Ciudad, Estado)" value={searchState.location} onChange={handleChange} className="col-span-1 md:col-span-2 lg:col-span-2 p-3 rounded-md text-gray-700 focus:ring-2 focus:ring-blue-500" />
+                        <select name="type" value={searchState.type} onChange={handleChange} className="p-3 rounded-md text-gray-500 focus:ring-2 focus:ring-blue-500">
+                            <option value="all">Tipo de Propiedad</option>
+                            <option value="House">Casa</option>
+                            <option value="Apartment">Apartamento</option>
+                            <option value="Condo">Condominio</option>
+                            <option value="Villa">Villa</option>
                         </select>
-                        <select className="p-3 rounded-md text-gray-500 focus:ring-2 focus:ring-blue-500">
-                            <option>Rango de Precio</option>
-                            <option>$100k - $300k</option>
-                            <option>$300k - $600k</option>
-                            <option>$600k - $1M</option>
+                        <select name="price" value={searchState.price} onChange={handleChange} className="p-3 rounded-md text-gray-500 focus:ring-2 focus:ring-blue-500">
+                            <option value="all">Rango de Precio</option>
+                            <option value="0-500000">$0 - $500,000</option>
+                            <option value="500000-1000000">$500,000 - $1,000,000</option>
+                            <option value="1000000-2000000">$1,000,000 - $2,000,000</option>
+                            <option value="2000000+">$2,000,000+</option>
                         </select>
                         <button type="submit" className="col-span-1 md:col-span-4 lg:col-span-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition duration-300">
                             Buscar
@@ -37,7 +67,8 @@ const HeroSection: React.FC = () => (
             </div>
         </div>
     </div>
-);
+    );
+};
 
 // Featured Properties Section
 const FeaturedProperties: React.FC = () => {
@@ -52,7 +83,7 @@ const FeaturedProperties: React.FC = () => {
                 .limit(3);
             
             if (error) {
-                console.error('Error fetching properties:', error);
+                console.error('Error fetching featured properties. This might be due to missing RLS policies. Details:', error.message);
             } else {
                 setProperties(data as Property[]);
             }
@@ -108,13 +139,13 @@ const ServicesSection: React.FC = () => (
 );
 
 // Why Choose Us Section
-const WhyChooseUs: React.FC = () => (
+const WhyChooseUs: React.FC<{ content: WebsiteContent | null }> = ({ content }) => (
     <div className="bg-blue-600 text-white py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
                 <div>
-                    <h2 className="text-3xl font-bold mb-4">¿Por Qué Elegirnos?</h2>
-                    <p className="mb-8">Con años de experiencia y un compromiso con la excelencia, ofrecemos resultados inigualables y un servicio al cliente excepcional. Somos más que solo agentes; somos sus socios en bienes raíces.</p>
+                    <h2 className="text-3xl font-bold mb-4">{content?.why_choose_us_title || '¿Por Qué Elegirnos?'}</h2>
+                    <p className="mb-8">{content?.why_choose_us_text || 'Con años de experiencia y un compromiso con la excelencia, ofrecemos resultados inigualables y un servicio al cliente excepcional. Somos más que solo agentes; somos sus socios en bienes raíces.'}</p>
                     <div className="grid grid-cols-2 gap-8">
                         <div className="text-center">
                             <p className="text-4xl font-bold">500+</p>
@@ -201,12 +232,31 @@ const ContactForm: React.FC = () => (
 
 
 const HomePage: React.FC = () => {
+  const [content, setContent] = useState<WebsiteContent | null>(null);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+        const { data, error } = await supabase
+            .from('website_content')
+            .select('*')
+            .eq('id', 1)
+            .maybeSingle();
+        
+        if (error) {
+            console.error('Error fetching website content for homepage. This might be due to missing RLS policies. Details:', error.message);
+        } else {
+            setContent(data);
+        }
+    };
+    fetchContent();
+  }, []);
+
   return (
     <div>
-      <HeroSection />
+      <HeroSection content={content} />
       <FeaturedProperties />
       <ServicesSection />
-      <WhyChooseUs />
+      <WhyChooseUs content={content} />
       <AgentProfile />
       <ContactForm />
     </div>

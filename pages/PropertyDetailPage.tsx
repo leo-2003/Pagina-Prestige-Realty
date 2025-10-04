@@ -21,6 +21,86 @@ const AreaIcon = () => (
     </svg>
 );
 
+// Agent Contact Form Component
+const AgentContactForm: React.FC<{ agent: Property['agent'], propertyId: string }> = ({ agent, propertyId }) => {
+    const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.name || !formData.email) {
+            alert('Por favor, complete los campos de nombre y correo electrónico.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setSubmitStatus('idle');
+
+        const { error } = await supabase.from('clients').insert([
+            {
+                name: formData.name,
+                email: formData.email,
+                initial_message: formData.message,
+                property_id: propertyId,
+                status: 'New',
+                inquiry_date: new Date().toISOString().split('T')[0]
+            }
+        ]);
+
+        if (error) {
+            console.error('Error creating new client lead:', error);
+            setSubmitStatus('error');
+        } else {
+            setSubmitStatus('success');
+            setFormData({ name: '', email: '', message: '' });
+        }
+        setIsSubmitting(false);
+    };
+
+    return (
+        <div className="bg-white p-8 rounded-lg shadow-lg h-fit sticky top-24">
+            <h3 className="text-2xl font-bold mb-6 text-center">Contactar al Agente</h3>
+            <div className="flex flex-col items-center mb-4">
+                <img src={agent.imageUrl} alt={agent.name} className="w-24 h-24 rounded-full object-cover mb-3" />
+                <p className="font-bold text-xl">{agent.name}</p>
+            </div>
+            <div className="space-y-3 mb-6">
+                <a href={`tel:${agent.phone}`} className="flex items-center text-gray-700 hover:text-blue-600">
+                    <PhoneIcon className="h-5 w-5 mr-3"/> {agent.phone}
+                </a>
+                <a href={`mailto:${agent.email}`} className="flex items-center text-gray-700 hover:text-blue-600">
+                    <EnvelopeIcon className="h-5 w-5 mr-3"/> {agent.email}
+                </a>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <input type="text" name="name" placeholder="Tu Nombre" value={formData.name} onChange={handleChange} required className="w-full p-3 border rounded-md" />
+                <input type="email" name="email" placeholder="Tu Email" value={formData.email} onChange={handleChange} required className="w-full p-3 border rounded-md" />
+                <textarea name="message" placeholder="Estoy interesado en esta propiedad..." value={formData.message} onChange={handleChange} rows={4} className="w-full p-3 border rounded-md"></textarea>
+                <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-blue-400">
+                    {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
+                </button>
+            </form>
+            {submitStatus === 'success' && (
+                <p className="mt-4 text-center text-green-600 bg-green-100 p-2 rounded-md">
+                    ¡Mensaje enviado con éxito! Un agente se pondrá en contacto con usted en breve.
+                </p>
+            )}
+            {submitStatus === 'error' && (
+                <p className="mt-4 text-center text-red-600 bg-red-100 p-2 rounded-md">
+                    Hubo un error al enviar su mensaje. Por favor, inténtelo de nuevo.
+                </p>
+            )}
+        </div>
+    );
+};
+
+
 const PropertyDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [property, setProperty] = useState<Property | null>(null);
@@ -41,7 +121,7 @@ const PropertyDetailPage: React.FC = () => {
                 .single();
 
             if (error) {
-                console.error("Error fetching property:", error);
+                console.error("Error fetching property. This might be due to missing RLS policies. Details:", error.message);
                 setError("Property not found.");
             } else {
                 setProperty(data as Property);
@@ -150,7 +230,7 @@ const PropertyDetailPage: React.FC = () => {
                             <div className="flex flex-col items-center p-4 bg-blue-50 rounded-lg"><BedIcon /> <div><span className="font-bold text-xl">{property.bedrooms}</span> Habitaciones</div></div>
                             <div className="flex flex-col items-center p-4 bg-blue-50 rounded-lg"><BathIcon /> <div><span className="font-bold text-xl">{property.bathrooms}</span> Baños</div></div>
                             <div className="flex flex-col items-center p-4 bg-blue-50 rounded-lg"><AreaIcon /> <div><span className="font-bold text-xl">{property.area.toLocaleString()}</span> sqft</div></div>
-                            <div className="flex flex-col items-center p-4 bg-blue-50 rounded-lg"><CalendarIcon className="h-6 w-6 mr-2 text-blue-600"/> <div><span className="font-bold text-xl">{property.yearBuilt}</span> Año</div></div>
+                            <div className="flex flex-col items-center p-4 bg-blue-50 rounded-lg"><CalendarIcon className="h-6 w-6 mr-2 text-blue-600"/> <div><span className="font-bold text-xl">{property.year_built}</span> Año</div></div>
                         </div>
                         
                         <div className="mb-8">
@@ -175,29 +255,7 @@ const PropertyDetailPage: React.FC = () => {
                     </div>
                     
                     {/* Agent/Contact Card */}
-                    <div className="bg-white p-8 rounded-lg shadow-lg h-fit sticky top-24">
-                        <h3 className="text-2xl font-bold mb-6 text-center">Contactar al Agente</h3>
-                        <div className="flex flex-col items-center mb-4">
-                            <img src={property.agent.imageUrl} alt={property.agent.name} className="w-24 h-24 rounded-full object-cover mb-3" />
-                            <p className="font-bold text-xl">{property.agent.name}</p>
-                        </div>
-                         <div className="space-y-3 mb-6">
-                            <a href={`tel:${property.agent.phone}`} className="flex items-center text-gray-700 hover:text-blue-600">
-                                <PhoneIcon className="h-5 w-5 mr-3"/> {property.agent.phone}
-                            </a>
-                             <a href={`mailto:${property.agent.email}`} className="flex items-center text-gray-700 hover:text-blue-600">
-                                <EnvelopeIcon className="h-5 w-5 mr-3"/> {property.agent.email}
-                            </a>
-                        </div>
-                        <form className="space-y-4">
-                            <input type="text" placeholder="Tu Nombre" className="w-full p-3 border rounded-md" />
-                            <input type="email" placeholder="Tu Email" className="w-full p-3 border rounded-md" />
-                            <textarea placeholder="Estoy interesado en esta propiedad..." rows={4} className="w-full p-3 border rounded-md"></textarea>
-                            <button type="submit" className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
-                                Enviar Mensaje
-                            </button>
-                        </form>
-                    </div>
+                    <AgentContactForm agent={property.agent} propertyId={property.id} />
                 </div>
             </div>
         </div>

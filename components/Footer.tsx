@@ -3,8 +3,12 @@ import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
     
-  // FIX: Changed children type from generic T to React.ReactNode
-  const SocialIcon = ({ href, children }: {href: string, children: React.ReactNode}) => (
+  interface SocialIconProps {
+    href: string;
+    children: React.ReactNode;
+  }
+
+  const SocialIcon = ({ href, children }: SocialIconProps) => (
     <a href={href} className="text-gray-400 hover:text-blue-500 transition-colors duration-300">
         {children}
     </a>
